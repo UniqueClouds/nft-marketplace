@@ -5,7 +5,8 @@ pragma solidity ^0.8.4;
 import "./NFTMarket.sol";
 
 contract NFTAuction is NFTMarket {
-    uint _Items = 0;
+    using Counters for Counters.Counter;
+    Counters.Counter public _itemIds2;
     struct AuctionItem {
         uint itemId;
         uint tokenId;
@@ -42,8 +43,8 @@ contract NFTAuction is NFTMarket {
         idToMarketItem[tokenId].price = startPrice;
 
         uint256 endTime = block.timestamp + duration;
-        _Items +=1;
-        uint itemId = _Items;
+        _itemIds2.increment();
+        uint itemId = _itemIds2.current();
         idToAuctionItem[itemId] =AuctionItem(
             itemId,
             tokenId,
@@ -58,58 +59,66 @@ contract NFTAuction is NFTMarket {
 
     //竞拍
     function bid(
-        uint tokenId, 
+        uint itemId, 
         uint256 newBid
     )public payable nonReentrant{
-        require(!idToAuctionItem[tokenId].auctionEnded,"Auction alread ended!");
-        require(idToAuctionItem[tokenId].highestBid < newBid,"No allowance for lower bid!");
+        require(!idToAuctionItem[itemId].auctionEnded,"Auction alread ended!");
+        require(idToAuctionItem[itemId].highestBid < newBid,"No allowance for lower bid!");
 
-        idToAuctionItem[tokenId].winner = payable(msg.sender);
-        idToAuctionItem[tokenId].highestBid = newBid;
+        idToAuctionItem[itemId].winner = payable(msg.sender);
+        idToAuctionItem[itemId].highestBid = newBid;
 
     }
 
     function endAuction(
-        uint tokenId
+        uint itemId
     ) public payable nonReentrant{
-        require(idToMarketItem[tokenId].owner == msg.sender,"Only owner can end an auction");
+        require(idToMarketItem[itemId].owner == msg.sender,"Only owner can end an auction");
 
-        require(!idToAuctionItem[tokenId].auctionEnded,"Already ended.");
+        require(!idToAuctionItem[itemId].auctionEnded,"Already ended.");
 
-        idToMarketItem[tokenId].state = status.waitToClaim;
-        idToMarketItem[tokenId].price = idToAuctionItem[tokenId].highestBid;
-        idToAuctionItem[tokenId].auctionEnded = true;
+        idToMarketItem[itemId].state = status.waitToClaim;
+        idToMarketItem[itemId].price = idToAuctionItem[itemId].highestBid;
+        idToAuctionItem[itemId].auctionEnded = true;
+        idToAuctionItem[itemId].winnerClaimed = false;
     }
     //transfer ownershiop and value
     function claim(
         address nftContract,
-        uint tokenId,
-        uint price
+        uint itemId
     )public payable nonReentrant{
-        // require(idToAuctionItem[tokenId].auctionEnded,"Auction not ended yet!");
-        // require(!idToAuctionItem[tokenId].winnerClaimed, "Auction already claimed!");
-        // require(idToAuctionItem[tokenId].winner == msg.sender, "Only winner can claim!");
-        
+        require(idToAuctionItem[itemId].auctionEnded,"Auction not ended yet!");
+        require(!idToAuctionItem[itemId].winnerClaimed, "Auction already claimed!");
+        require(idToAuctionItem[itemId].winner == msg.sender, "Only winner can claim!");
+        uint tokenId = idToMarketItem[itemId].tokenId;
         //send money to the seller
-        address owner = idToMarketItem[tokenId].owner;
+        address owner = idToMarketItem[itemId].owner;
         payable(owner).transfer(msg.value);
         //transfer the ownership to buyer
         IERC721(nftContract).transferFrom(address(this),msg.sender, tokenId);
-        idToMarketItem[tokenId].owner = payable(msg.sender);
-        idToMarketItem[tokenId].state = status.offBid;
-        payable(owner).transfer(price);
+        idToMarketItem[itemId].owner = payable(msg.sender);
+        idToMarketItem[itemId].state = status.offBid;
+        idToAuctionItem[itemId].winnerClaimed = true;
+        idToAuctionItem[itemId].auctionEnded = true;
+        idToMarketItem[itemId].transferTime ++;
     }
 
 
     function fetchAuctionItems() public view returns (AuctionItem[] memory) {
-        uint256 totalItemCount = _itemIds;
-        uint itemCount = 0;
+        uint256 totalItemCount = getItemCurrent();
         uint currentIndex = 0;
-        AuctionItem[] memory items = new AuctionItem[] (totalItemCount);
+        uint itemCount = 0;
+        for(uint i = 0; i< totalItemCount; i++ ){
+            if(idToMarketItem[i +  1].state == status.onBid || idToMarketItem[i + 1].state == status.waitToClaim){
+                itemCount += 1;
+            }
+        }
+
+        AuctionItem[] memory items = new AuctionItem[] (itemCount);
         //insert the unsold nft items
-        for(uint i = 0; i < totalItemCount; i++ ){
-            if(!idToAuctionItem[i + 1].winnerClaimed){
-                uint currentId = idToAuctionItem[i + 1].itemId;
+        for(uint i = 0; i < itemCount; i++ ){
+            if(!idToAuctionItem[i+1].winnerClaimed){
+                uint currentId = idToAuctionItem[i+1].itemId;
                 AuctionItem storage currentItem = idToAuctionItem[currentId];
                 items[currentIndex] = currentItem;
                 currentIndex += 1;

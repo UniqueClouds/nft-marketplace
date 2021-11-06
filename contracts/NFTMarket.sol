@@ -8,7 +8,9 @@ import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "hardhat/console.sol";
 
 contract NFTMarket is ReentrancyGuard {
-    uint256 public _itemIds = 0;
+    using Counters for Counters.Counter;
+    Counters.Counter private _itemIds;
+    Counters.Counter private _itemSold;
     // using Counters for Counters.Counter;
     // Counters.Counter  _itemIds;
     // Counters.Counter private _itemsSold;
@@ -21,7 +23,7 @@ contract NFTMarket is ReentrancyGuard {
     constructor(){
         owner = payable(msg.sender);
     }
-    
+       
     struct MarketItem {
         uint itemId;    //编号
         address nftContract;    //
@@ -45,16 +47,20 @@ contract NFTMarket is ReentrancyGuard {
         uint price
     );
     // get listing price of the contract
-    function getListPrice() public view returns (uint256){
-        return listingPrice;
+    // function getListPrice() public view returns (uint256){
+    //     return listingPrice;
+    // }
+    // place an item for sale on the marke
+    function getItemCurrent() public view returns (uint256){
+        return _itemIds.current();
     }
-    // place an item for sale on the market
     function createMarketItem(
         address nftContract,
         uint256 tokenId
     ) public payable nonReentrant {
-        _itemIds += 1;
-        uint256 itemId = _itemIds;
+
+        _itemIds.increment();
+        uint256 itemId = _itemIds.current();
 
         idToMarketItem[itemId] = MarketItem(
             itemId,
@@ -127,7 +133,7 @@ contract NFTMarket is ReentrancyGuard {
     // }
     // view items user owned themselves
     function fetchMyNFTs() public view returns (MarketItem[] memory) {
-        uint totalItemCount = _itemIds;
+        uint totalItemCount = _itemIds.current();
         uint itemCount = 0;
         uint currentIndex = 0;
 
@@ -152,7 +158,7 @@ contract NFTMarket is ReentrancyGuard {
 
     //view items user created themselves
     function fetchItemsCreated() public view returns (MarketItem[] memory) {
-        uint totalItemCount = _itemIds;
+        uint totalItemCount = _itemIds.current();
         uint itemCount = 0;
         uint currentIndex = 0;
 
@@ -161,7 +167,6 @@ contract NFTMarket is ReentrancyGuard {
                 itemCount += 1;
             }
         }
-
         MarketItem[] memory items = new MarketItem[] (itemCount);
 
         for(uint i = 0; i< itemCount; i++ ){

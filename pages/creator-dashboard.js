@@ -5,7 +5,7 @@ import axios from 'axios'
 import Web3Modal from "web3modal"
 
 import {
-	nftmarketaddress, nftaddress
+	nftauctionaddress, nftaddress
 } from '../config'
 
 import NFT from '../artifacts/contracts/NFT.sol/NFT.json'
@@ -24,7 +24,7 @@ export default function CreatorDashboard() {
 		const provider = new ethers.providers.Web3Provider(connection)
 		const signer = provider.getSigner()
 
-		const marketContract = new ethers.Contract(nftmarketaddress, Market.abi, signer)
+		const marketContract = new ethers.Contract(nftauctionaddress, Market.abi, signer)
 		const tokenContract = new ethers.Contract(nftaddress, NFT.abi, provider)
 		const data = await marketContract.fetchItemsCreated()
 
