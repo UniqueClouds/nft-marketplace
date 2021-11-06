@@ -10,7 +10,7 @@ function MyApp({ Component, pageProps }) {
 				<div className="flex mt-6 ">
 					<Link href="/">
 						<a className="mr-6 text-red-500 ">
-							主页
+							浏览
 						</a>
 					</Link>
 					<Link href="/create-item">
@@ -20,12 +20,7 @@ function MyApp({ Component, pageProps }) {
 					</Link>
 					<Link href="/my-assets">
 						<a className="mr-6 text-red-500">
-							我拥有的NFT
-						</a>
-					</Link>
-					<Link href="/creator-dashboard">
-						<a className="mr-6 text-red-500">
-							Creator Dashboard
+							我的仓库
 						</a>
 					</Link>
 				</div>
