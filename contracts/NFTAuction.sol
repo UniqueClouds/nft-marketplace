@@ -16,6 +16,7 @@ contract NFTAuction is NFTMarket {
         uint256 endTime;
         bool auctionEnded;  //判断竞拍是否结束
         bool winnerClaimed;
+        bool onAuction;
     }
     event AuctionItemCreated(
         uint indexed itemId,
@@ -25,7 +26,8 @@ contract NFTAuction is NFTMarket {
         address winner,
         uint256 endTime,
         bool auctionEnded,
-        bool winnerClaimed
+        bool winnerClaimed,
+        bool onAuction
     );
     // let startBid = ethers.utils.formatUnits(i.startBid.toNumber(),"ether")
     // let highestBid = ethers.utils.formatUnits(i.highestBid.toNumber(),"ether")
@@ -53,7 +55,8 @@ contract NFTAuction is NFTMarket {
             payable(msg.sender),
             endTime,
             false,
-            false
+            false,
+            true
         );
     }
 
@@ -63,6 +66,7 @@ contract NFTAuction is NFTMarket {
         uint256 newBid
     )public payable nonReentrant{
         require(!idToAuctionItem[itemId].auctionEnded,"Auction alread ended!");
+        require(idToMarketItem[itemId].owner != msg.sender,"No allowance for self-buy!");
         require(idToAuctionItem[itemId].highestBid < newBid,"No allowance for lower bid!");
 
         idToAuctionItem[itemId].winner = payable(msg.sender);
@@ -90,7 +94,7 @@ contract NFTAuction is NFTMarket {
         require(idToAuctionItem[itemId].auctionEnded,"Auction not ended yet!");
         require(!idToAuctionItem[itemId].winnerClaimed, "Auction already claimed!");
         require(idToAuctionItem[itemId].winner == msg.sender, "Only winner can claim!");
-        uint tokenId = idToMarketItem[itemId].tokenId;
+        uint tokenId = idToAuctionItem[itemId].tokenId;
         //send money to the seller
         address owner = idToMarketItem[itemId].owner;
         payable(owner).transfer(msg.value);
@@ -100,16 +104,17 @@ contract NFTAuction is NFTMarket {
         idToMarketItem[itemId].state = status.offBid;
         idToAuctionItem[itemId].winnerClaimed = true;
         idToAuctionItem[itemId].auctionEnded = true;
+        idToAuctionItem[itemId].onAuction = false;
         idToMarketItem[itemId].transferTime ++;
     }
 
 
     function fetchAuctionItems() public view returns (AuctionItem[] memory) {
-        uint256 totalItemCount = getItemCurrent();
+        uint256 totalItemCount = _itemIds2.current();
         uint currentIndex = 0;
         uint itemCount = 0;
         for(uint i = 0; i< totalItemCount; i++ ){
-            if(idToMarketItem[i +  1].state == status.onBid || idToMarketItem[i + 1].state == status.waitToClaim){
+            if(idToAuctionItem[i+1].onAuction){
                 itemCount += 1;
             }
         }

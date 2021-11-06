@@ -45,11 +45,12 @@ export default function Home() {
 			let item = {
 				startBid,
 				highestBid,
-				tokenId: i.tokenId,
+				tokenId: i.tokenId.toNumber(),
 				image: meta.data.image,
 				name: meta.data.name,
 				description: meta.data.description,
-				auctionEnded:i.auctionEnded
+				auctionEnded:i.auctionEnded,
+				onAuction:i.onAuction
 			}
 				console.log(item)
 				return item
@@ -79,7 +80,7 @@ export default function Home() {
     	const provider = new ethers.providers.Web3Provider(connection)
     	const signer = provider.getSigner()
     	const contract = new ethers.Contract(nftauctionaddress, Auction.abi, signer)
-		const transaction = await contract.claim(nftaddress,nft.tokenId,nft.highestBid)
+		const transaction = await contract.claim(nftaddress,nft.tokenId)
 		await transaction.wait()
 		loadNFTs()
 	}
@@ -113,7 +114,7 @@ export default function Home() {
 										)
 										:(<div className="p-4 bg-blue-400">
 										<p className="text-2xl mb-4 font-bold text-white">当前竞价:{nft.highestBid} ETH</p>
-										<input 
+										<input required
 										placeholder="出价" 
 										className=" border rounded w-full p-2 " 
 										onChange={e => updateFormInput({...formInput, newPrice: e.target.value})}/>
